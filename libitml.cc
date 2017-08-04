@@ -43,10 +43,12 @@ typedef struct {
 
 
 /**
-* Learns a Mahalanobis distance metric `(x-y)^T * A * (x-y)` from given data and constraints using Information Theoretic Metric Learning (ITML).
+* Learns a Mahalanobis distance metric `(x-y)^T * A * (x-y)` from given data and constraints using
+* Information Theoretic Metric Learning (ITML).
 *
-* ITML minimizes the differential relative entropy between two multivariate Gaussians under constraints on the distance function,
-* which can be formulated into a Bregman optimization problem by minimizing the LogDet divergence subject to linear constraints.
+* ITML minimizes the differential relative entropy between two multivariate Gaussians under constraints
+* on the distance function, which can be formulated into a Bregman optimization problem by minimizing the
+* LogDet divergence subject to linear constraints.
 * Unlike some other methods, ITML does not rely on an eigenvalue computation or semi-definite programming.
 *
 * The constraints enforced by ITML have the following form:
@@ -54,8 +56,8 @@ typedef struct {
 * - `(x-y)^T * A * (x-y) < th_pos` for two similar samples `x` and `y`
 * - `(x-y)^T * A * (x-y) > th_neg` for two dissimilar samples `x` and `y`
 * 
-* In theory, individual thresholds could be specified for all pairs, but this implementation only supports constant `th_pos` and `th_neg` at
-* the moment.
+* In theory, individual thresholds could be specified for all pairs, but this implementation only supports
+* constant `th_pos` and `th_neg` at the moment.
 *
 * Reference:  
 * Jason V. Davis, Brian Kulis, Prateek Jain, Suvrit Sra, Inderjit S. Dhillon.  
@@ -68,30 +70,34 @@ typedef struct {
 * 
 * @param[in] pX Pointer to an n-by-d matrix `X` containing one sample per row, stored in row-major order.
 * 
-* @param[in,out] pA Pointer to a row-major d-by-d matrix `A` which initially contains the prior metric serving as a regularizer (usually the
-* identity matrix or inverse covariance). The algorithm will update this matrix in-place, so that it will finally contain the learned metric
-* or its Cholesky decomposition, depending on the value of `return_metric`.
+* @param[in,out] pA Pointer to a row-major d-by-d matrix `A` which initially contains the prior metric serving
+* as a regularizer (usually the identity matrix or inverse covariance). The algorithm will update this matrix
+* in-place, so that it will finally contain the learned metric or its Cholesky decomposition, depending on the
+* value of `return_metric`.
 * 
 * @param[in] nb_pos Number of similarity constraints.
 * 
-* @param[in] pos Pointer to an array of `nb_pos` similarity constraints, given as pairs of indices of similar samples in `X`.
+* @param[in] pos Pointer to an array of `nb_pos` similarity constraints, given as pairs of indices of similar
+* samples in `X`.
 * 
 * @param[in] nb_neg Number of dissimilarity constraints.
 * 
-* @param[in] neg Pointer to an array of `nb_neg` dissimilarity constraints, given as pairs of indices of dissimilar samples in `X`.
+* @param[in] neg Pointer to an array of `nb_neg` dissimilarity constraints, given as pairs of indices of
+* dissimilar samples in `X`.
 * 
-* @param[in] th_pos Threshold for distances of similar samples. ITML enforces the given pairs of similar samples to have a distance less than
-* this threshold.
+* @param[in] th_pos Threshold for distances of similar samples. ITML enforces the given pairs of similar samples
+* to have a distance less than this threshold.
 * 
-* @param[in] th_neg Threshold for distances of dissimilar samples. ITML enforces the given pairs of dissimilar samples to have a distance
-* greater than this threshold.
+* @param[in] th_neg Threshold for distances of dissimilar samples. ITML enforces the given pairs of dissimilar
+* samples to have a distance greater than this threshold.
 * 
-* @param[in] return_metric The algorithm actually learns the Cholesky decomposition `L` of the metric `A` with `A = L * L^T`, which can be
-* used to transform the data into a space where the Euclidean distance corresponds to the learned metric. This matrix `L` will be stored in
-* the matrix pointed to by `pA`. If, however, the actual metric `A` is desired, this parameter can be set to `true` to obtain `A` in the
-* matrix pointed to by `pA`.
+* @param[in] return_metric The algorithm actually learns the Cholesky decomposition `L` of the metric `A` with
+* `A = L * L^T`, which can be used to transform the data into a space where the Euclidean distance corresponds to
+* the learned metric. This matrix `L` will be stored in the matrix pointed to by `pA`. If, however, the actual
+* metric `A` is desired, this parameter can be set to `true` to obtain `A` in the matrix pointed to by `pA`.
 * 
-* @param[in] gamma Controls the trade-off between satisyfing the given constraints and minimizing the divergence from the prior metric.
+* @param[in] gamma Controls the trade-off between satisyfing the given constraints and minimizing the divergence
+* from the prior metric.
 * Higher `gamma` puts more weight on the constraints, while lower `gamma` enforces stronger regularization.
 * 
 * @param[in] max_iter Maximum number of iterations.
@@ -108,12 +114,13 @@ typedef struct {
 *   - `ITML_ERR_INVALID_CONSTRAINTS`: Some of the given indices of similar or dissimilar pairs are out of bounds.
 */
 template<typename F>
-int itml(int n, int d, const F * pX, F * pA, int nb_pos, const itml_pair * pos, int nb_neg, const itml_pair * neg, F th_pos, F th_neg,
+int itml(int n, int d, const F * pX, F * pA,
+         int nb_pos, const itml_pair * pos, int nb_neg, const itml_pair * neg, F th_pos, F th_neg,
          bool return_metric = false, F gamma = 1.0, int max_iter = 1000, F conv_th = 0.001, bool verbose = false)
 {
     // General local variables
     int i;
-    int num_pos, num_neg, num_constraints; // effective number of positive/negative constraints (may be smaller than nb_pos or nb_neg)
+    int num_pos, num_neg, num_constraints; // effective number of positive/negative constraints
     const itml_pair * pair;
     const F eps = std::numeric_limits<F>::epsilon();
     
@@ -125,7 +132,8 @@ int itml(int n, int d, const F * pX, F * pA, int nb_pos, const itml_pair * pos, 
     Eigen::Map<Matrix> A(pA, d, d);
     
     // Cholesky decomposition of initial metric A0
-    // Rank-Updates of the Cholesky matrix are very slow in Eigen with RowMajor storage order. Thus, we use a ColMajor matrix for llt.
+    // Rank-Updates of the Cholesky matrix are very slow in Eigen with RowMajor storage order.
+    // Thus, we use a ColMajor matrix for llt.
     Eigen::LLT<ColMatrix, Eigen::Lower> llt(A);
     if (llt.info() != Eigen::Success)
         return ITML_ERR_A0;
@@ -223,13 +231,15 @@ int itml(int n, int d, const F * pX, F * pA, int nb_pos, const itml_pair * pos, 
 extern "C"
 {
 
-int itml_float(int n, int d, float * pX, float * pA, int nb_pos, const itml_pair * pos, int nb_neg, const itml_pair * neg, float th_pos, float th_neg,
+int itml_float(int n, int d, float * pX, float * pA,
+               int nb_pos, const itml_pair * pos, int nb_neg, const itml_pair * neg, float th_pos, float th_neg,
                bool return_metric = false, float gamma = 1.0, int max_iter = 1000, float conv_th = 0.001, bool verbose = false)
 {
     return itml(n, d, pX, pA, nb_pos, pos, nb_neg, neg, th_pos, th_neg, return_metric, gamma, max_iter, conv_th, verbose);
 }
 
-int itml_double(int n, int d, double * pX, double * pA, int nb_pos, const itml_pair * pos, int nb_neg, const itml_pair * neg, double th_pos, double th_neg,
+int itml_double(int n, int d, double * pX, double * pA,
+                int nb_pos, const itml_pair * pos, int nb_neg, const itml_pair * neg, double th_pos, double th_neg,
                 bool return_metric = false, double gamma = 1.0, int max_iter = 1000, double conv_th = 0.001, bool verbose = false)
 {
     return itml(n, d, pX, pA, nb_pos, pos, nb_neg, neg, th_pos, th_neg, return_metric, gamma, max_iter, conv_th, verbose);
