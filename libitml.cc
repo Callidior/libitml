@@ -91,9 +91,9 @@ typedef struct {
 * @param[in] th_neg Threshold for distances of dissimilar samples. ITML enforces the given pairs of dissimilar
 * samples to have a distance greater than this threshold.
 * 
-* @param[in] return_metric The algorithm actually learns the Cholesky decomposition `L` of the metric `A` with
-* `A = L * L^T`, which can be used to transform the data into a space where the Euclidean distance corresponds to
-* the learned metric. This matrix `L` will be stored in the matrix pointed to by `pA`. If, however, the actual
+* @param[in] return_metric The algorithm actually learns the Cholesky decomposition `U` of the metric `A` with
+* `A = U^T * U`, which can be used to transform the data into a space where the Euclidean distance corresponds to
+* the learned metric. This matrix `U` will be stored in the matrix pointed to by `pA`. If, however, the actual
 * metric `A` is desired, this parameter can be set to `true` to obtain `A` in the matrix pointed to by `pA`.
 * 
 * @param[in] gamma Controls the trade-off between satisyfing the given constraints and minimizing the divergence
@@ -127,14 +127,11 @@ int itml(int n, int d, const F * pX, F * pA,
     // Wrapper around array pointers
     typedef Eigen::Matrix<F, Eigen::Dynamic, 1> Vector;
     typedef Eigen::Matrix<F, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Matrix;
-    typedef Eigen::Matrix<F, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> ColMatrix;
     Eigen::Map<const Matrix> X(pX, n, d);
     Eigen::Map<Matrix> A(pA, d, d);
     
     // Cholesky decomposition of initial metric A0
-    // Rank-Updates of the Cholesky matrix are very slow in Eigen with RowMajor storage order.
-    // Thus, we use a ColMajor matrix for llt.
-    Eigen::LLT<ColMatrix, Eigen::Lower> llt(A);
+    Eigen::LLT<Matrix, Eigen::Upper> llt(A);
     if (llt.info() != Eigen::Success)
         return ITML_ERR_A0;
     
@@ -185,13 +182,13 @@ int itml(int n, int d, const F * pX, F * pA,
         for (i = 0; i < num_constraints; ++i)
         {
             sign = (i < num_pos) ? 1 : -1;
-            Lv.noalias() = vv.row(i) * llt.matrixL();
+            Lv.noalias() = llt.matrixU() * vv.row(i).transpose();
             dist = Lv.squaredNorm();
             alpha = std::min(lambda(i), sign * gamma_proj * (1/dist - 1/bhat(i)));
             lambda(i) -= alpha;
             beta = sign * alpha / (1 - sign * alpha * dist);
             bhat(i) = 1 / ((1 / bhat(i)) + sign * (alpha / gamma));
-            Av.noalias() = llt.matrixL() * Lv;
+            Av.noalias() = llt.matrixU().transpose() * Lv;
             llt.rankUpdate(Av, beta);
         }
         
@@ -220,9 +217,9 @@ int itml(int n, int d, const F * pX, F * pA,
     }
     
     // Store computed metric or its Cholesky decomposition in pA
-    A = llt.matrixL().toDenseMatrix();
+    A = llt.matrixU().toDenseMatrix();
     if (return_metric)
-        A = llt.matrixL() * A.transpose();
+        A = A.transpose() * llt.matrixU();
     
     return it;
 }

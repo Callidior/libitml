@@ -43,10 +43,10 @@ def itml(X, A0, pos_pairs, neg_pairs, th_pos, th_neg,
     th_neg: Threshold for distances of dissimilar samples. ITML enforces the given pairs of dissimilar
             samples to have a distance greater than this threshold.
     
-    return_metric: The algorithm actually learns the Cholesky decomposition `L` of the metric `A` with
-                   `A = L * L^T`, which can be used to transform the data into a space where the Euclidean
+    return_metric: The algorithm actually learns the Cholesky decomposition `U` of the metric `A` with
+                   `A = U^T * U`, which can be used to transform the data into a space where the Euclidean
                    distance corresponds to the learned metric.
-                   If return_metric is False, this Cholesky decomposition `L` will be returned, otherwise
+                   If return_metric is False, this Cholesky decomposition `U` will be returned, otherwise
                    the full metric `A`.
     
     gamma: Controls the trade-off between satisyfing the given constraints and minimizing the divergence
