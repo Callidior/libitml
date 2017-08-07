@@ -1,5 +1,5 @@
-libitml
-=======
+Information-Theoretic Metric Learning (ITML) library
+====================================================
 
 This is an efficient `C++` implementation of [Information-Theoretic Metric Learning][1] (Davis et al., ICML 2017),
 based on the [Python implementation by CJ Carey][2].
