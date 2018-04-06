@@ -84,6 +84,7 @@ def itml(X, A0, pos_pairs, neg_pairs, th_pos, th_neg,
     # Check A0
     if A0 is None:
         A0 = np.eye(X.shape[1], dtype=dtype)
+        copy = False
     else:
         A0 = np.asarray(A0)
     if A0.ndim != 2:
