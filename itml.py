@@ -55,7 +55,7 @@ def itml(X, A0, pos_pairs, neg_pairs, th_pos, th_neg,
     
     max_iter: Maximum number of iterations.
     
-    conv_th_ Convergence threshold.
+    conv_th: Convergence threshold.
     
     verbose: If set to `true`, information about convergence will be written to `stderr` during learning.
     
