@@ -12,9 +12,10 @@ LIBITML_PATHS = [os.path.join(BASEDIR, 'libitml.so'),
                 'libitml.so', 'libitml.dll', 'libitml', 'itml']
 
 itml_error_msgs = {
-    -1 : 'Given prior metric is not positive-semidefinite.',
-    -2 : 'No non-trivial constraints given.',
-    -3 : 'Invalid constraints given.'
+    -1 : (ValueError, 'Given prior metric is not positive-semidefinite.'),
+    -2 : (ValueError, 'No non-trivial constraints given.'),
+    -3 : (ValueError, 'Invalid constraints given.'),
+    -4 : (RuntimeError, 'Cholesky decomposition of learned metric failed.')
 }
 
 class constraint_t(Structure):
@@ -63,8 +64,10 @@ def itml(X, A0, pos_pairs, neg_pairs, th_pos, th_neg,
     
     Returns: The learned metric or its Cholesky decomposition, depending on the value of return_metric.
     
-    Raises: In the case of invalid input arguments, ValueError is raised. OSError may be raised if
-            libitml cannot be found.
+    Raises: In the case of invalid input arguments, ValueError is raised.
+            If the library returns an error code not directly related to the input arguments,
+            RuntimeError will be raised.
+            OSError may be raised if libitml cannot be found.
     """
     
     lib = _init_lib()
@@ -127,7 +130,10 @@ def itml(X, A0, pos_pairs, neg_pairs, th_pos, th_neg,
     
     # Handle errors
     if result < 0:
-        raise ValueError(itml_error_msgs[result] if result in itml_error_msgs else 'unknown error')
+        if result in itml_error_msgs:
+            raise itml_error_msgs[result][0](itml_error_msgs[result[1]])
+        else:
+            raise RuntimeError('unknown error')
     
     return A0
 

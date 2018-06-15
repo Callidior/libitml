@@ -31,6 +31,7 @@
 #define ITML_ERR_A0 -1
 #define ITML_ERR_NO_CONSTRAINTS -2
 #define ITML_ERR_INVALID_CONSTRAINTS -3
+#define ITML_ERR_CHOL -4
 
 
 /**
@@ -109,9 +110,10 @@ typedef struct {
 * @return On success, returns the number of iterations needed until convergence.
 * If this is equal to `max_iter`, the algorithm terminated prematurely without reaching convergence.
 * In the case of error, one of the following error codes is returned:
-*   - `ITML_ERR_A0`: The given prior metric is not positive-semidefinite.
+*   - `ITML_ERR_A0` (not used anymore): The given prior metric is not positive-semidefinite.
 *   - `ITML_ERR_NO_CONSTRAINTS`: No non-trivial constraints have been given.
 *   - `ITML_ERR_INVALID_CONSTRAINTS`: Some of the given indices of similar or dissimilar pairs are out of bounds.
+*   - `ITML_ERR_CHOL`: Cholesky decomposition of learned metric failed.
 */
 template<typename F>
 int itml(int n, int d, const F * pX, F * pA,
@@ -129,11 +131,7 @@ int itml(int n, int d, const F * pX, F * pA,
     typedef Eigen::Matrix<F, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> Matrix;
     Eigen::Map<const Matrix> X(pX, n, d);
     Eigen::Map<Matrix> A(pA, d, d);
-    
-    // Cholesky decomposition of initial metric A0
-    Eigen::LLT<Matrix, Eigen::Upper> llt(A);
-    if (llt.info() != Eigen::Success)
-        return ITML_ERR_A0;
+    Eigen::SelfAdjointView<Eigen::Map<Matrix>, Eigen::Upper> As = A.template selfadjointView<Eigen::Upper>();
     
     // Slice rows from X according to constraints
     Matrix vv(nb_pos + nb_neg, d);
@@ -167,7 +165,7 @@ int itml(int n, int d, const F * pX, F * pA,
     int sign;
     F dist, alpha, beta, normsum, conv;
     F gamma_proj = std::isinf(gamma) ? 1 : gamma/(gamma+1);
-    Vector Lv(d), Av(d);
+    Vector Av(d);
     Vector lambda = Vector::Zero(num_constraints);
     Vector lambda_old = Vector::Zero(num_constraints);
     Vector bhat(num_constraints);
@@ -182,14 +180,13 @@ int itml(int n, int d, const F * pX, F * pA,
         for (i = 0; i < num_constraints; ++i)
         {
             sign = (i < num_pos) ? 1 : -1;
-            Lv.noalias() = llt.matrixU() * vv.row(i).transpose();
-            dist = Lv.squaredNorm();
+            Av.noalias() = As * vv.row(i).transpose();
+            dist = vv.row(i).dot(Av);
             alpha = std::min(lambda(i), sign * gamma_proj * (1/dist - 1/bhat(i)));
             lambda(i) -= alpha;
             beta = sign * alpha / (1 - sign * alpha * dist);
             bhat(i) = 1 / ((1 / bhat(i)) + sign * (alpha / gamma));
-            Av.noalias() = llt.matrixU().transpose() * Lv;
-            llt.rankUpdate(Av, beta);
+            As.rankUpdate(Av, beta);
         }
         
         // Check for convergence
@@ -217,9 +214,14 @@ int itml(int n, int d, const F * pX, F * pA,
     }
     
     // Store computed metric or its Cholesky decomposition in pA
-    A = llt.matrixU().toDenseMatrix();
-    if (return_metric)
-        A = A.transpose() * llt.matrixU();
+    A = As;
+    if (!return_metric)
+    {
+        Eigen::LLT<Matrix, Eigen::Upper> llt(A);
+        if (llt.info() != Eigen::Success)
+            return ITML_ERR_CHOL;
+        A = llt.matrixU().toDenseMatrix();
+    }
     
     return it;
 }
