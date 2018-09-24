@@ -1,7 +1,7 @@
 Information-Theoretic Metric Learning (ITML) library
 ====================================================
 
-This is an efficient `C++` implementation of [Information-Theoretic Metric Learning][1] (Davis et al., ICML 2017),
+This is an efficient `C++` implementation of [Information-Theoretic Metric Learning][1] (Davis et al., ICML 2007),
 based on the [Python implementation by CJ Carey][2].
 
 It requires the [Eigen library][3] of version at least 3.1 and has been tested with `gcc` 4.8 and 5.3 and `Eigen` 3.3.
