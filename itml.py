@@ -2,14 +2,22 @@
 
 import numpy as np
 import os.path
+from glob import glob
 from ctypes import *
 
 BASEDIR = os.path.dirname(__file__)
 
 LIB = []  # library will be loaded on first use
-LIBITML_PATHS = [os.path.join(BASEDIR, 'libitml.so'),
-                 os.path.join(BASEDIR, 'libitml.dll'),
-                'libitml.so', 'libitml.dll', 'libitml', 'itml']
+LIBITML_PATHS = [
+    os.path.join(BASEDIR, 'libitml.so'),
+    os.path.join(BASEDIR, 'libitml.dll'),
+    os.path.join(BASEDIR, 'libitml.*.so'),
+    os.path.join(BASEDIR, 'libitml.*.dll'),
+    'libitml.so',
+    'libitml.dll',
+    'libitml',
+    'itml',
+]
 
 itml_error_msgs = {
     -1 : (ValueError, 'Given prior metric is not positive-semidefinite.'),
@@ -142,15 +150,19 @@ def _init_lib():
     
     if len(LIB) == 0:
         
-        for i, path in enumerate(LIBITML_PATHS):
-            try:
-                lib = CDLL(path)
-            except OSError:
-                lib = None
-                if i == len(LIBITML_PATHS) - 1:
-                    raise
+        for i, path_pattern in enumerate(LIBITML_PATHS):
+            paths = glob(path_pattern) if "*" in path_pattern else [path_pattern]
+            for path in paths:
+                try:
+                    lib = CDLL(path)
+                except OSError:
+                    lib = None
+                    if i == len(LIBITML_PATHS) - 1:
+                        raise
+                if lib is not None:
+                    break
             if lib is not None:
-                break
+                    break
         
         lib.itml_float = _create_itml_cfunc(lib, 'itml_float', c_float)
         lib.itml_double = _create_itml_cfunc(lib, 'itml_double', c_double)
