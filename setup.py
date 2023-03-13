@@ -8,7 +8,7 @@ def main():
         author="Björn Barz",
         url="https://github.com/Callidior/libitml",
         py_modules=["itml"],
-        ext_modules=[Extension("itml.lib", ["libitml.cc"], extra_compile_args=["-march=native", "-fopenmp"], extra_link_args=["-fopenmp"])],
+        ext_modules=[Extension("libitml", ["libitml.cc"], extra_compile_args=["-march=native", "-fopenmp"], extra_link_args=["-fopenmp"])],
     )
 
 if __name__ == '__main__':
